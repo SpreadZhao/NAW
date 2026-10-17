@@ -1,15 +1,15 @@
 # Agent workspace
 
-Edit flake.nix to declare a catalog and select skills, then enter with nix develop.
-This template starts without skills or business tools. Sources can be Nix paths,
-derivations or pinned non-flake inputs.
+Declare `skills`, `targets`, `instructions` and development `packages` in flake.nix,
+then enter with `nix develop path:$PWD` or direnv. Local sources and remote inputs
+are copied into the Nix Store. Skill content is not validated.
 
-The template references github:SpreadZhao/agent-workspace. For local development,
-replace its input URL with a path: reference to your checkout or override it when locking.
-Use a path: reference for an untracked flake, or track template files in Git.
+Enabled skill directories are whole-directory links to read-only generated content.
+AGENTS.md is generated from `instructions`; adding `"claude"` to `targets` also
+generates CLAUDE.md. Edit the Nix declarations and their sources, then reload.
 
-claude = true enables Claude skills and CLAUDE.md. Explicit targets override the
-target presets. Existing AGENTS.md conflicts by default: choose
-manageInstructions = false or onConflict = "skip" to keep user instructions.
+Any existing target, even an empty directory or identical link, prevents initial
+installation. Managed links update on reload. Old manager state is not migrated.
+The template's .gitignore is an ordinary editable file; the manager never touches it.
 
-See the manager README for configuration, ownership, cleanup and GC roots.
+See the agent-workspace README for the interface and Home Manager integration.

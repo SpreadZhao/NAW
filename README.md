@@ -1,127 +1,94 @@
 # agent-workspace
 
-通过 Nix 管理本机和项目的 agent skills。安装引擎按每个技能入口处理，
-Home Manager 与 workspace 共用同一套来源、目标和冲突规则。
-管理器不依赖个人技能或 `spreadconfig`。
+用 Nix 声明技能和项目指令，以只读目录提供给 Agent。安装与更新使用 Bash，
+不需要 Python，也不解析或校验 Skill 内容。
 
 ## 使用
 
-通过 GitHub 模板初始化 workspace：
-
 ```bash
-nix flake new -t github:SpreadZhao/agent-workspace#workspace my-workspace
-cd my-workspace
-# 编辑 flake.nix 后进入；Git 仓库内请先跟踪模板文件，或使用 path: 引用。
+nix flake new -t github:SpreadZhao/agent-workspace#workspace my-project
+cd my-project
+# 编辑 flake.nix 后进入环境；未提交的文件使用 path: 引用。
 nix develop path:$PWD
 ```
 
-初始化只有 flake 模板和 `nix develop`。模板没有预选技能和业务工具。
-内容仓库可作为普通 `flake = false` input：
-
 ```nix
 {
-  inputs = {
-    agent-workspace.url = "github:SpreadZhao/agent-workspace";
-    personal-skills = {
-      url = "github:SpreadZhao/personal-skills";
-      flake = false;
-    };
-    nixpkgs.follows = "agent-workspace/nixpkgs";
+  inputs.agent-workspace.url = "github:SpreadZhao/agent-workspace";
+  inputs.my-skills = {
+    url = "github:example/skills";
+    flake = false;
   };
-  outputs = { agent-workspace, personal-skills, ... }:
+  outputs = { agent-workspace, my-skills, ... }:
     agent-workspace.lib.mkWorkspace {
-      catalog = {
-        leetcode-coach = { source = personal-skills; subdir = "skills/leetcode-coach"; };
-      };
-      skills = [ "leetcode-coach" ];
-      claude = true;
-      packages = pkgs: [ pkgs.git ];
+      skills.example = "${my-skills}/skills/example";
+      targets = [ "agents" "claude" ];
+      instructions = ''
+        项目的指令正文。
+      '';
+      packages = pkgs: [ pkgs.git pkgs.ripgrep ];
     };
 }
 ```
 
+来源可使用本地 Nix 路径（如 `./my-skill`）、锁定的远程 input，或 Nix derivation。
+Nix 将来源内容复制到 Store；来源不应放在生成的目录内。
+不检查 `SKILL.md`、名称、frontmatter 或正文，内容是否可被 Agent 使用由来源维护者负责。
+
 ## 接口
 
 `lib.mkWorkspace` 输出 `devShells.<system>.default` 和 `checks.<system>.workspace`。
-`lib.mkSkillInstaller` 接受相同安装参数以及 `pkgs`、`scope`（global/workspace）
-和可选绝对字符串 `root`，返回含 `bin/agent-workspace-install` 的 derivation。
-它的 `passthru.bundle`、`manifest`、`validation` 可用于检查来源；不是初始化命令。
+进入 shell 自动安装，安装成功后设置 `AGENT_WORKSPACE_ROOT` 并执行 `shellHook`。
+项目根目录是当前目录向上遇到的最近一个包含 `flake.nix` 的目录。
 
-| 参数 | 默认与行为 |
+| 参数 | 默认值 |
 | --- | --- |
-| `catalog` | `{}`；名称到路径、derivation 或来源记录。也支持 `pkgs: catalog` |
-| `skills` | `[]`；显式选择，重复选择去重，未知名称报错 |
-| `extraSkills` | `{}`；自动选择，与 catalog 同名时报错 |
-| `targets` | agents 启用；claude、codex 关闭；支持自定义目标 |
-| `mode` | `"symlink"`；或 `"copy"` |
-| `onConflict` | workspace `"error"`；global `"skip"`；只有这两种策略 |
-| `cleanup` | workspace `true`；global `false` |
-| `systems` | `[ "x86_64-linux" "aarch64-linux" ]`，仅 workspace |
-| `packages` | `pkgs: []`；也接受包列表，仅 workspace |
-| `shellHook` | `""`；初始化后执行，仅 workspace |
-| `claude` | `false`；开启 Claude 目标预设与 `CLAUDE.md → AGENTS.md` |
-| `workspaceRoot` | `null`；从当前目录向上找最近 flake.nix；可传绝对字符串 |
-| `autoActivate` | `true`；进入开发环境时准备 workspace |
-| `instructions` | `""`；追加到生成的 AGENTS.md |
-| `manageInstructions` | workspace `true`；关闭时不创建指令文件 |
-| `manageGitignore` | workspace `true`；只维护本管理器的忽略块 |
+| `skills` | `{}`，名称直接映射到来源 |
+| `targets` | `[ "agents" ]`；可选 `agents`、`claude`、`codex` |
+| `instructions` | `""`，原样写入生成的 `AGENTS.md` |
+| `packages` | `pkgs: []`，也接受包列表 |
+| `shellHook` | `""`，安装成功后执行 |
+| `systems` | `[ "x86_64-linux" "aarch64-linux" ]` |
 
-来源记录为 `{ source = ...; subdir = "..."; targets = [ "agents" ]; }`。
-`subdir` 可省略；`targets` 未指定时安装到所有启用目标。
-目标配置为 `{ enable = true; path = ".agents/skills"; }`。
-路径必须相对安装根目录，不允许 `..` 或符号链接父目录。
-显式 `targets.claude.enable = false` 可以覆盖 `claude` 的目标预设，
-指令链接由 `claude` 与 `manageInstructions` 决定。
+目标对应 `.agents/skills`、`.claude/skills`、`.codex/skills`。
+这些目录整体链接到只读 Store，目录内的技能内容也只读。
+项目始终生成 `AGENTS.md`；选择 `claude` 时增加 `CLAUDE.md → AGENTS.md`。
 
-`lib.discoverSkills { source = input; subdir = "skills"; maxDepth = 100; }`
-递归生成名称到来源记录的映射，遇到技能目录便停止向下递归。
-发现过程读取标准 frontmatter 的 name；构建时完整验证 YAML、name 与 description。
-来源加工使用 `pkgs: catalog`，无需反向引用消费仓库。
+## 安装规则
+
+- 首次安装遇到任何已有目标都会报错，包括空目录、普通文件、相同链接和断链。
+  项目的已有 `AGENTS.md` 或 `CLAUDE.md` 同样报错。
+- 所有冲突先检查，任一冲突都会使本次安装失败，不覆盖、不跳过、不接管。
+- 已登记且未改动的链接可以重复加载；修改 Nix 声明后重新进入环境即可更新。
+  被删除的受管理链接会重新生成，被替换的链接报错，撤选的目标会移除。
+- 未启用的其他 Agent 目录不检查。父目录可以存在，但不能是软链。
+- Gitignore、Git 配置和 index 不参与管理。模板中的 `.gitignore` 是普通项目文件。
+
+项目状态在 `.agent-workspace/`，本机状态在 `.local/state/agent-workspace/`。
+`current` 链接指向当前生成版本，`roots/` 保存 Nix GC root，安装布局保存在 Store 中。
+使用目录锁串行更新；先准备新版本，再原子切换 `current`。普通失败会撤销本次准备，
+不提供断电或强制终止后的自动修复框架。
 
 ## Home Manager
 
-导入 `agent-workspace.homeManagerModules.default`：
-
 ```nix
+imports = [ inputs.agent-workspace.homeManagerModules.default ];
 programs.agent-workspace = {
   enable = true;
-  catalog.my-skill = { source = skillInput; subdir = "skills/my-skill"; };
-  skills = [ "my-skill" ];
-  targets.claude.enable = true;
-  # onConflict = "skip"; cleanup = false; mode = "symlink";
+  skills.example = "${inputs.my-skills}/skills/example";
+  targets = [ "agents" "claude" ];
 };
 ```
 
-模块公开 `catalog`、`skills`、`extraSkills`、`targets`、`mode`、`onConflict`、`cleanup`。
-本机安装根目录为 `home.homeDirectory`；目标预设为 `.agents/skills`、
-`.claude/skills` 和 `.codex/skills`。
+安装根目录为 `home.homeDirectory`。只管理技能目录，不管理 home 根目录的指令。
+启用的技能目录由这个配置独占，不能同时放入手动安装或其他工具安装的技能。
+Home Manager dry-run 不执行安装。
 
-## 所有权与冲突
+## 从旧版重新初始化
 
-父目录和技能入口缺失时创建。完全相同的结果保持不变；现有外部入口不会被接管。
-真实目录、文件、指向不同来源的链接及断开的链接都可能冲突。
-`error` 在所有来源、目标、指令文件及撤选操作预检通过前不写文件。
-`skip` 保留冲突入口，继续安装其他缺失项，并报告跳过原因。
-没有自动覆盖策略。更新锁定来源后，旧链接与新来源不同，需要移除指定旧入口再安装。
+此版本不兼容旧参数和旧状态，也不提供自动迁移。
+先备份旧生成物，人工移走旧的技能目标、项目指令和管理器状态，再使用新接口进入环境。
+清理的是生成物，技能源和指令源应保留。不确定是否属于旧生成物时先检查，不要递归删除来源。
+原来的 `catalog`、`extraSkills`、`claude` 等配置需改成上面的 `skills` 和 `targets`。
 
-非受管理的 AGENTS.md 即使内容相同也触发指令文件冲突；
-可以选择 `manageInstructions = false` 或 `onConflict = "skip"`。
-`cleanup = true` 仅清理有记录且未被修改的撤选入口；修改过的内容遵循冲突策略。
-复制结果包含整个技能目录，保留链接与可执行权限，并通过内容指纹检测变化。
-
-workspace 状态固定为 `.agent-workspace/state.json`，本机状态固定为
-`.local/state/agent-workspace/state.json`。使用目录锁、原子写入和间接 GC roots。
-历史来源 roots 保留，以免跳过的旧入口失去来源；状态目录可随 workspace 一起移除。
-支持读取 spreadconfig 的 v2 状态与旧忽略块；迁移仍遵循来源冲突规则。
-移走 workspace 后重新进入会重新注册根目录中的 GC roots。
-
-## 验证
-
-```bash
-nix flake check path:$PWD
-nix develop path:$PWD -c python tests/test_install.py
-```
-
-检查覆盖安装幂等、冲突零写入、逐项跳过、多目标、复制指纹、清理、
-外部入口所有权、指令开关、旧状态迁移、来源与目标校验。
-另有 Nix API 检查，覆盖选择去重、未知名称、额外来源碰撞及递归发现。
+运行依赖为 Bash、coreutils、util-linux 和 Nix，由安装器的 Nix 包提供。

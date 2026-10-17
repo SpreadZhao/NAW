@@ -1,2 +1,7 @@
 .direnv/
-# Workspace activation maintains its own ignore block below.
+.agents/
+.claude/
+.codex/
+.agent-workspace/
+/AGENTS.md
+/CLAUDE.md

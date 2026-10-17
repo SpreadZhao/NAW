@@ -4,14 +4,12 @@
   outputs =
     { agent-workspace, ... }:
     agent-workspace.lib.mkWorkspace {
-      catalog = { };
-      skills = [ ];
-      # extraSkills.my-skill = ./skills/my-skill;
+      skills = { };
+      targets = [ "agents" ];
+      instructions = "";
       packages = pkgs: [
         pkgs.git
         pkgs.ripgrep
       ];
-      claude = false;
-      instructions = "";
     };
 }
