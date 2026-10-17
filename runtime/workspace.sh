@@ -2,27 +2,19 @@
 set -euo pipefail
 
 die() {
-	printf 'agent-workspace: %s\n' "$*" >&2
+	printf 'naw: %s\n' "$*" >&2
 	exit 1
 }
 exists() { [[ -e $1 || -L $1 ]]; }
 
-scope=$1 bundle=$2 root=$3
-case "$scope" in
-workspace) state_dir=.agent-workspace ;;
-global) state_dir=.local/state/agent-workspace ;;
-*) die "unknown installation scope: $scope" ;;
-esac
-if [[ -z $root ]]; then
-	root=$(pwd -P)
-	while [[ ! -f $root/flake.nix ]]; do
-		[[ $root != / ]] || die 'no flake.nix above the current directory'
-		root=${root%/*}
-		root=${root:-/}
-	done
-else
-	root=$(cd -- "$root" && pwd -P)
-fi
+bundle=$1
+state_dir=.naw
+root=$(pwd -P)
+while [[ ! -f $root/flake.nix ]]; do
+	[[ $root != / ]] || die 'no flake.nix above the current directory'
+	root=${root%/*}
+	root=${root:-/}
+done
 state=$root/$state_dir
 exec {lock_fd}<"$root"
 flock -x "$lock_fd"
@@ -32,11 +24,9 @@ link_target() {
 	case "$1" in
 	.agents/skills | .claude/skills | .codex/skills) printf '../%s/current/skills' "$state_dir" ;;
 	AGENTS.md)
-		[[ $scope == workspace ]] || die 'unexpected global instruction'
 		printf '%s/current/AGENTS.md' "$state_dir"
 		;;
 	CLAUDE.md)
-		[[ $scope == workspace ]] || die 'unexpected global instruction'
 		printf 'AGENTS.md'
 		;;
 	*) die "unknown managed path: $1" ;;
@@ -80,9 +70,7 @@ for path in "${wanted[@]}"; do
 	link_target "$path" >/dev/null
 	desired["$path"]=1 observed["$path"]=1
 done
-if [[ $scope == workspace ]]; then
-	observed["AGENTS.md"]=1 observed["CLAUDE.md"]=1
-fi
+observed["AGENTS.md"]=1 observed["CLAUDE.md"]=1
 for path in "${!observed[@]}"; do
 	parents_clear "$path"
 	if exists "$root/$path"; then
@@ -170,6 +158,6 @@ done
 if [[ -n $staging ]]; then mv -Tf -- "$staging/current" "$state/current"; fi
 committed=true
 if [[ -n $old_gc && $old_gc != "$gc_root" ]]; then
-	rm -- "$old_gc" || printf 'agent-workspace: could not remove old GC root: %s\n' "$old_gc" >&2
+	rm -- "$old_gc" || printf 'naw: could not remove old GC root: %s\n' "$old_gc" >&2
 fi
 printf '%s\n' "$root"

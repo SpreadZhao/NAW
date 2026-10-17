@@ -1,9 +1,9 @@
 {
-  description = "Agent workspace";
-  inputs.agent-workspace.url = "github:SpreadZhao/agent-workspace";
+  description = "NAW project workspace";
+  inputs.naw.url = "github:SpreadZhao/NAW";
   outputs =
-    { agent-workspace, ... }:
-    agent-workspace.lib.mkWorkspace {
+    { naw, ... }:
+    naw.lib.mkWorkspace {
       skills = { };
       targets = [ "agents" ];
       instructions = "";

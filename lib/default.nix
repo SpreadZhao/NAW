@@ -20,25 +20,24 @@
             inherit system;
             config.allowUnfree = true;
           };
-          installer = import ./installer.nix {
+          installer = import ./workspace.nix {
             inherit
               pkgs
               skills
               targets
               instructions
               ;
-            scope = "workspace";
           };
         in
         {
           shell = pkgs.mkShell {
             packages = if builtins.isFunction packages then packages pkgs else packages;
             shellHook = ''
-              if ! AGENT_WORKSPACE_ROOT="$(${installer}/bin/agent-workspace-install)"; then
-                echo "Workspace preparation failed; resolve conflicts and enter again." >&2
+              if ! NAW_WORKSPACE_ROOT="$(${installer}/bin/naw-workspace-activate)"; then
+                echo "NAW workspace preparation failed; resolve conflicts and enter again." >&2
                 exit 1
               fi
-              export AGENT_WORKSPACE_ROOT
+              export NAW_WORKSPACE_ROOT
             ''
             + shellHook;
           };

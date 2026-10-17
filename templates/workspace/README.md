@@ -1,15 +1,16 @@
-# Agent workspace
+# NAW Workspace
 
 Declare `skills`, `targets`, `instructions` and development `packages` in flake.nix,
-then enter with `nix develop path:$PWD` or direnv. Local sources and remote inputs
-are copied into the Nix Store. Skill content is not validated.
+then enter with `nix develop path:$PWD` or direnv. Sources are copied into the Nix
+Store without validating Skill content.
 
-Enabled skill directories are whole-directory links to read-only generated content.
-AGENTS.md is generated from `instructions`; adding `"claude"` to `targets` also
-generates CLAUDE.md. Edit the Nix declarations and their sources, then reload.
+NAW links enabled skill directories to read-only content. AGENTS.md is generated
+from `instructions`; adding `"claude"` to `targets` also generates CLAUDE.md.
+Edit the declarations and their sources, then reload.
 
-Any existing target, even an empty directory or identical link, prevents initial
-installation. Managed links update on reload. Old manager state is not migrated.
-The template's .gitignore is an ordinary editable file; the manager never touches it.
+Existing targets, including empty directories and identical links, prevent initial
+installation. Managed links update on reload; state is kept under `.naw/`.
+The template's .gitignore is an ordinary editable file and is not managed by NAW.
 
-See the agent-workspace README for the interface and Home Manager integration.
+Global skills use the separate `homeManagerModules.globalSkills` module.
+See the NAW README for both interfaces.
