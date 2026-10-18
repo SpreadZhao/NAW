@@ -112,3 +112,19 @@ not manage `.gitignore`, Git configuration or the index. The template's
 
 Legacy interfaces and state have no automatic migration. Back up and move old
 generated files before setup, retaining the original skill and instruction sources.
+
+## Develop NAW
+
+This repository uses its local `lib.mkWorkspace` for development. Enter with
+`nix develop "path:$PWD"` while new sources are untracked, or use `nix develop`
+and direnv once they are tracked. The shell provides nixfmt, ShellCheck, shfmt,
+Statix, deadnix, Git and ripgrep.
+
+NAW installs its local `naw-development` skill for agents and Claude and generates
+their instructions from `flake.nix`. Edit that source and `skills/`, then re-enter
+the shell. Generated links and `.naw/` state are ignored by Git.
+
+Run `nix flake check "path:$PWD"` to check the exports and build the workspace
+bundle. For installer changes, also test the affected behavior in an isolated
+temporary workspace. See the [development skill](skills/naw-development/SKILL.md)
+for module ownership and maintenance constraints.

@@ -1,1 +1,7 @@
 /result
+/.direnv/
+/.naw/
+/.agents/skills
+/.claude/skills
+/AGENTS.md
+/CLAUDE.md
