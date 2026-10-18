@@ -22,7 +22,7 @@ in
     skills = lib.mkOption {
       type = lib.types.attrsOf lib.types.anything;
       default = { };
-      description = "Skill names mapped directly to Nix sources.";
+      description = "Skill names mapped to source paths or derivations.";
     };
     targets = lib.mkOption {
       type = lib.types.listOf (

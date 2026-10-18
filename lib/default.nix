@@ -34,7 +34,7 @@
             packages = if builtins.isFunction packages then packages pkgs else packages;
             shellHook = ''
               if ! NAW_WORKSPACE_ROOT="$(${installer}/bin/naw-workspace-activate)"; then
-                echo "NAW workspace preparation failed; resolve conflicts and enter again." >&2
+                echo "NAW setup failed; fix the error above and re-enter the shell." >&2
                 exit 1
               fi
               export NAW_WORKSPACE_ROOT

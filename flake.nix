@@ -1,12 +1,12 @@
 {
-  description = "NAW (Nix-Agent-Workspace): project workspaces and global skills";
+  description = "Manage agent skills and project workspaces with Nix and Home Manager";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   outputs =
     { nixpkgs, ... }:
     let
       template = {
         path = ./templates/workspace;
-        description = "Minimal NAW project workspace";
+        description = "Project shell with agent skills and instructions";
       };
     in
     {

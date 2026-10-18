@@ -19,7 +19,7 @@ state=$root/$state_dir
 exec {lock_fd}<"$root"
 flock -x "$lock_fd"
 
-# Only Nix-generated layouts are read. No writable shell code or JSON state.
+# Read Nix-generated manifests without sourcing writable project code.
 link_target() {
 	case "$1" in
 	.agents/skills | .claude/skills | .codex/skills) printf '../%s/current/skills' "$state_dir" ;;
@@ -86,7 +86,7 @@ if exists "$gc_root"; then
 	[[ -L $gc_root && $(readlink -- "$gc_root") == "$bundle" ]] || die "generation root conflict: $gc_root"
 fi
 
-# Preflight is complete. Until current changes, failures restore the old layout.
+# Roll back prepared links if setup fails before current is replaced.
 created_dirs=() added=() removed=()
 staging='' committed=false
 make_dir() {

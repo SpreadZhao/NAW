@@ -1,16 +1,16 @@
-# NAW Workspace
+# NAW workspace
 
-Declare `skills`, `targets`, `instructions` and development `packages` in flake.nix,
-then enter with `nix develop path:$PWD` or direnv. Sources are copied into the Nix
-Store without validating Skill content.
+Declare skills, targets, instructions and development tools in `flake.nix`.
+Enter with `nix develop "path:$PWD"` or direnv, then reload after changing the
+configuration or its sources.
 
-NAW links enabled skill directories to read-only content. AGENTS.md is generated
-from `instructions`; adding `"claude"` to `targets` also generates CLAUDE.md.
-Edit the declarations and their sources, then reload.
+NAW copies skills to the read-only Nix store and links the selected agent
+directories. It generates `AGENTS.md` from `instructions`; selecting `claude`
+also creates `CLAUDE.md` as a link to it. Edit the source files, not these links.
 
-Existing targets, including empty directories and identical links, prevent initial
-installation. Managed links update on reload; state is kept under `.naw/`.
-The template's .gitignore is an ordinary editable file and is not managed by NAW.
+Initial setup refuses existing output paths, including empty directories and
+identical links. Later runs update managed links using state under `.naw/`.
+Maintain the template's `.gitignore` yourself.
 
-Global skills use the separate `homeManagerModules.globalSkills` module.
-See the NAW README for both interfaces.
+See the [NAW documentation](https://github.com/SpreadZhao/NAW) for workspace
+arguments, conflict handling and the separate Home Manager global-skills module.
